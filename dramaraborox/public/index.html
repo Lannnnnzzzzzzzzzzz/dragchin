@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DramaboRox API Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 5px; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300">
+    <nav class="bg-red-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold">📺 DramaboRox API</h1>
+            <a href="/app" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors">Open App</a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8 max-w-5xl">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-2 text-white">API Documentation</h2>
+            <p class="text-gray-400">API Proxy untuk dramabox.kangprah.web.id</p>
+        </div>
+
+        <div class="grid gap-6">
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold px-2.5 py-0.5 rounded">GET</span>
+                    <span class="font-mono text-sm font-bold text-gray-200">/api/home</span>
+                </div>
+                <p class="text-sm text-gray-400">Get homepage data</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold px-2.5 py-0.5 rounded">GET</span>
+                    <span class="font-mono text-sm font-bold text-gray-200">/api/search</span>
+                </div>
+                <p class="text-sm text-gray-400 mb-2">Search drama content</p>
+                <p class="text-xs text-gray-500">Parameters: ?q={query}&page={page}</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold px-2.5 py-0.5 rounded">GET</span>
+                    <span class="font-mono text-sm font-bold text-gray-200">/api/trending</span>
+                </div>
+                <p class="text-sm text-gray-400">Get trending dramas</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold px-2.5 py-0.5 rounded">GET</span>
+                    <span class="font-mono text-sm font-bold text-gray-200">/api/latest</span>
+                </div>
+                <p class="text-sm text-gray-400 mb-2">Get latest dramas</p>
+                <p class="text-xs text-gray-500">Parameters: ?page={page}</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold px-2.5 py-0.5 rounded">GET</span>
+                    <span class="font-mono text-sm font-bold text-gray-200">/api/detail/:id</span>
+                </div>
+                <p class="text-sm text-gray-400">Get drama detail by ID</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold px-2.5 py-0.5 rounded">GET</span>
+                    <span class="font-mono text-sm font-bold text-gray-200">/api/episode/:id</span>
+                </div>
+                <p class="text-sm text-gray-400 mb-2">Get episode video URL</p>
+                <p class="text-xs text-gray-500">Parameters: ?episode={number}</p>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Melongo App - Nonton Drama & Film Gratis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #1a1a2e; }
+        ::-webkit-scrollbar-thumb { background: #16213e; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0f3460; }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .video-container iframe,
+        .video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans">
+
+    <nav class="bg-gradient-to-r from-green-900 via-green-800 to-green-900 shadow-2xl sticky top-0 z-50 border-b border-green-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="loadHome()">
+                    <i class="fas fa-play-circle text-3xl text-green-300"></i>
+                    <h1 class="text-2xl font-bold text-white">Melongo</h1>
+                </div>
+
+                <div class="flex-1 max-w-2xl mx-8">
+                    <div class="relative">
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Cari film atau drama..."
+                            class="w-full bg-gray-800 text-white rounded-full px-6 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                            onkeypress="handleSearch(event)"
+                        >
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <button onclick="performSearch()" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full transition-colors">
+                            Cari
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <button onclick="showApiDocs()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-code mr-2"></i>API
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+        <div id="content"></div>
+    </main>
+
+    <footer class="bg-gray-800 border-t border-gray-700 mt-16">
+        <div class="container mx-auto px-4 py-8 text-center text-gray-400">
+            <p>&copy; 2025 Melongo App - Streaming Platform</p>
+            <p class="text-sm mt-2">Powered by melolo.kangprah.web.id</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE = '';
+        let currentPage = 1;
+
+        function handleSearch(event) {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        }
+
+        function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (query) {
+                searchContent(query);
+            }
+        }
+
+        async function loadHome() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="mb-12">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-white flex items-center">
+                            <i class="fas fa-fire text-orange-500 mr-3"></i>
+                            Trending
+                        </h2>
+                    </div>
+                    <div id="trendingContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        ${createSkeletonCards(5)}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-white flex items-center">
+                            <i class="fas fa-clock text-green-500 mr-3"></i>
+                            Terbaru
+                        </h2>
+                    </div>
+                    <div id="latestContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        ${createSkeletonCards(10)}
+                    </div>
+                    <div class="flex justify-center mt-8">
+                        <button onclick="loadMoreLatest()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full transition-colors font-semibold">
+                            <i class="fas fa-plus mr-2"></i>Load More
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            loadTrending();
+            loadLatest();
+        }
+
+        async function loadTrending() {
+            try {
+                const response = await fetch(`${API_BASE}/api/trending`);
+                const data = await response.json();
+
+                const container = document.getElementById('trendingContainer');
+                if (data && Array.isArray(data)) {
+                    container.innerHTML = data.map(item => createCard(item, true)).join('');
+                } else {
+                    container.innerHTML = '<p class="text-gray-400 col-span-full text-center">Tidak ada data trending</p>';
+                }
+            } catch (error) {
+                console.error('Error loading trending:', error);
+                document.getElementById('trendingContainer').innerHTML =
+                    '<p class="text-red-400 col-span-full text-center">Gagal memuat data</p>';
+            }
+        }
+
+        async function loadLatest() {
+            try {
+                const response = await fetch(`${API_BASE}/api/latest?page=${currentPage}`);
+                const data = await response.json();
+
+                const container = document.getElementById('latestContainer');
+                if (data && Array.isArray(data)) {
+                    container.innerHTML = data.map(item => createCard(item)).join('');
+                } else {
+                    container.innerHTML = '<p class="text-gray-400 col-span-full text-center">Tidak ada data</p>';
+                }
+            } catch (error) {
+                console.error('Error loading latest:', error);
+                document.getElementById('latestContainer').innerHTML =
+                    '<p class="text-red-400 col-span-full text-center">Gagal memuat data</p>';
+            }
+        }
+
+        function loadMoreLatest() {
+            currentPage++;
+            loadLatest();
+        }
+
+        async function searchContent(query) {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="mb-6">
+                    <h2 class="text-3xl font-bold text-white mb-2">
+                        <i class="fas fa-search mr-3"></i>Hasil: "${query}"
+                    </h2>
+                </div>
+                <div id="searchResults" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                    ${createSkeletonCards(10)}
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                const container = document.getElementById('searchResults');
+                if (data && Array.isArray(data)) {
+                    container.innerHTML = data.map(item => createCard(item)).join('');
+                } else {
+                    container.innerHTML = '<p class="text-gray-400 col-span-full text-center py-12">Tidak ditemukan hasil</p>';
+                }
+            } catch (error) {
+                console.error('Error searching:', error);
+                document.getElementById('searchResults').innerHTML =
+                    '<p class="text-red-400 col-span-full text-center">Gagal melakukan pencarian</p>';
+            }
+        }
+
+        async function showDetail(id) {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="max-w-6xl mx-auto">
+                    <div class="mb-6">
+                        <button onclick="loadHome()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-arrow-left mr-2"></i>Kembali
+                        </button>
+                    </div>
+                    <div class="skeleton h-96 rounded-xl mb-6"></div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/detail/${id}`);
+                const data = await response.json();
+
+                if (data) {
+                    content.innerHTML = `
+                        <div class="max-w-6xl mx-auto">
+                            <div class="mb-6">
+                                <button onclick="loadHome()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+                                    <i class="fas fa-arrow-left mr-2"></i>Kembali
+                                </button>
+                            </div>
+
+                            <div class="bg-gray-800 rounded-xl overflow-hidden shadow-2xl">
+                                <div class="relative">
+                                    <img src="${data.cover || data.image || ''}" alt="${data.title || data.name}" class="w-full h-96 object-cover">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
+                                </div>
+
+                                <div class="p-8">
+                                    <h1 class="text-4xl font-bold text-white mb-4">${data.title || data.name}</h1>
+                                    <p class="text-gray-300 leading-relaxed mb-8">${data.description || data.synopsis || 'Tidak ada deskripsi'}</p>
+
+                                    ${data.episodes ? `
+                                        <div>
+                                            <h3 class="text-xl font-bold mb-4 text-white">Episode</h3>
+                                            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                                                ${data.episodes.map((ep, idx) => `
+                                                    <button onclick="playEpisode('${id}', ${idx + 1})" class="bg-gray-700 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition-colors font-semibold">
+                                                        Ep ${idx + 1}
+                                                    </button>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading detail:', error);
+            }
+        }
+
+        async function playEpisode(id, episode) {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="max-w-6xl mx-auto">
+                    <div class="mb-6">
+                        <button onclick="showDetail('${id}')" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-arrow-left mr-2"></i>Kembali
+                        </button>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-6">
+                        <h2 class="text-2xl font-bold text-white mb-4">Episode ${episode}</h2>
+                        <div class="video-container bg-black rounded-lg">
+                            <div class="flex items-center justify-center h-full">
+                                <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/episode/${id}?episode=${episode}`);
+                const data = await response.json();
+
+                if (data && data.url) {
+                    content.querySelector('.video-container').innerHTML = `
+                        <video controls autoplay class="w-full h-full">
+                            <source src="${data.url}" type="application/x-mpegURL">
+                            <source src="${data.url}" type="video/mp4">
+                        </video>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading episode:', error);
+            }
+        }
+
+        function showApiDocs() {
+            window.location.href = '/';
+        }
+
+        function createCard(item, showRank = false) {
+            return `
+                <div class="card-hover bg-gray-800 rounded-xl overflow-hidden shadow-lg cursor-pointer" onclick="showDetail('${item.id || item._id}')">
+                    ${showRank && item.rank ? `
+                        <div class="absolute top-2 left-2 bg-orange-500 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg z-10">
+                            ${item.rank}
+                        </div>
+                    ` : ''}
+                    <div class="relative pb-[140%]">
+                        <img src="${item.cover || item.image || item.poster || ''}" alt="${item.title || item.name}" class="absolute inset-0 w-full h-full object-cover">
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-semibold text-sm line-clamp-2">${item.title || item.name}</h3>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createSkeletonCards(count) {
+            return Array(count).fill(0).map(() => `
+                <div class="bg-gray-800 rounded-xl overflow-hidden">
+                    <div class="skeleton pb-[140%]"></div>
+                    <div class="p-4">
+                        <div class="skeleton h-4 w-3/4 mb-2 rounded"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        loadHome();
+    </script>
+</body>
+</html>
