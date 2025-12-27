@@ -5,13 +5,21 @@ const path = require('path');
 const app = express();
 const PORT = 3000;
 
-const BASE_URL   = 'https://regexd.com/base.php';
-const SEARCH_URL = 'https://regexd.com/base.php';
-const DETAIL_URL = 'https://regexd.com/base.php';
+const BASE_URL   = 'https://www.dramabox.com';
+const SEARCH_URL = 'https://www.dramabox.com/id/search';
+const DETAIL_URL = 'https://www.dramabox.com/id/watch';
 
 const getHeaders = () => ({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'X-Requested-With': 'XMLHttpRequest'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Cache-Control': 'max-age=0'
 });
 
 const extractBookId = (url) => {
@@ -31,41 +39,44 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/app', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
 app.get('/api/search', async (req, res) => {
     const query = req.query.q;
-    const lang = 'in';
 
     if (!query) return res.status(400).json({ error: 'Parameter q required' });
 
     try {
         const response = await axios.get(SEARCH_URL, {
-            params: { q: query, lang },
+            params: { q: query },
             headers: getHeaders()
         });
 
         const $ = cheerio.load(response.data);
         const searchResults = [];
-        const resultCountText = $('.search-results-count').text().trim();
 
-        $('.drama-grid .drama-card').each((index, element) => {
-            const title = $(element).find('.drama-title').text().trim();
-            const cover = $(element).find('.drama-image img').attr('src');
-            let episodeText = $(element).find('.drama-meta span[itemprop="numberOfEpisodes"]').text().trim();
-            if (!episodeText) episodeText = $(element).find('.drama-meta').text().replace('👁️ 0', '').trim();
-            const linkHref = $(element).find('a.watch-button').attr('href');
+        $('a.relative.group').each((index, element) => {
+            const linkHref = $(element).attr('href');
+            const title = $(element).find('h3').first().text().trim();
+            const cover = $(element).find('img').attr('src');
+            const episodeText = $(element).find('.text-xs.text-gray-500').text().trim();
 
-            searchResults.push({
-                bookId: extractBookId(linkHref),
-                judul: title,
-                total_episode: episodeText.replace('📺', '').trim(),
-                cover: cover
-            });
+            if (title && linkHref) {
+                searchResults.push({
+                    bookId: extractBookId(linkHref),
+                    judul: title,
+                    total_episode: episodeText,
+                    cover: cover,
+                    url: `${BASE_URL}${linkHref}`
+                });
+            }
         });
 
         res.json({
             status: 'success',
             query,
-            info: resultCountText,
             total_results: searchResults.length,
             data: searchResults
         });
@@ -76,29 +87,31 @@ app.get('/api/search', async (req, res) => {
 
 app.get('/api/latest', async (req, res) => {
     const page = req.query.page || 1;
-    const lang = 'in';
 
     try {
-        const response = await axios.get(BASE_URL, {
-            params: { page, lang },
+        const response = await axios.get(`${BASE_URL}/id`, {
+            params: { page },
             headers: getHeaders()
         });
 
         const $ = cheerio.load(response.data);
         const dramas = [];
 
-        $('.drama-grid .drama-card').each((index, element) => {
-            const title = $(element).find('.drama-title').text().trim();
-            const cover = $(element).find('.drama-image img').attr('src');
-            const episodeText = $(element).find('.drama-meta span').text().trim();
-            const linkHref = $(element).find('a.watch-button').attr('href');
-            
-            dramas.push({
-                bookId: extractBookId(linkHref),
-                judul: title,
-                total_episode: episodeText.replace('📺', '').trim(),
-                cover: cover
-            });
+        $('a.relative.group').each((index, element) => {
+            const linkHref = $(element).attr('href');
+            const title = $(element).find('h3').first().text().trim();
+            const cover = $(element).find('img').attr('src');
+            const episodeText = $(element).find('.text-xs.text-gray-500').text().trim();
+
+            if (title && linkHref) {
+                dramas.push({
+                    bookId: extractBookId(linkHref),
+                    judul: title,
+                    total_episode: episodeText,
+                    cover: cover,
+                    url: `${BASE_URL}${linkHref}`
+                });
+            }
         });
 
         res.json({
@@ -114,31 +127,30 @@ app.get('/api/latest', async (req, res) => {
 });
 
 app.get('/api/trending', async (req, res) => {
-    const lang = 'in';
-
     try {
-        const response = await axios.get(BASE_URL, {
-            params: { page: 1, lang },
+        const response = await axios.get(`${BASE_URL}/id`, {
             headers: getHeaders()
         });
 
         const $ = cheerio.load(response.data);
         const trendingDramas = [];
 
-        $('.rank-list .rank-item').each((index, element) => {
-            const title = $(element).find('.rank-title').text().trim();
-            const cover = $(element).find('.rank-image img').attr('src');
-            const episodeText = $(element).find('.rank-meta span').text().trim();
-            const rankNumber = $(element).find('.rank-number').text().trim();
+        $('a.relative.group').slice(0, 10).each((index, element) => {
             const linkHref = $(element).attr('href');
+            const title = $(element).find('h3').first().text().trim();
+            const cover = $(element).find('img').attr('src');
+            const episodeText = $(element).find('.text-xs.text-gray-500').text().trim();
 
-            trendingDramas.push({
-                rank: parseInt(rankNumber),
-                bookId: extractBookId(linkHref),
-                judul: title,
-                total_episode: episodeText.replace('📺', '').trim(),
-                cover: cover
-            });
+            if (title && linkHref) {
+                trendingDramas.push({
+                    rank: index + 1,
+                    bookId: extractBookId(linkHref),
+                    judul: title,
+                    total_episode: episodeText,
+                    cover: cover,
+                    url: `${BASE_URL}${linkHref}`
+                });
+            }
         });
 
         res.json({
@@ -154,29 +166,26 @@ app.get('/api/trending', async (req, res) => {
 
 app.get('/api/detail', async (req, res) => {
     const bookId = req.query.bookId;
-    const lang = 'in';
 
     if (!bookId) return res.status(400).json({ status: 'error', message: 'Parameter bookId wajib diisi.' });
 
     try {
         const response = await axios.get(DETAIL_URL, {
-            params: { bookId, lang },
+            params: { bookId },
             headers: getHeaders()
         });
 
         const $ = cheerio.load(response.data);
-        const rawTitleHtml = $('h1.video-title').html(); 
-        let cleanTitle = rawTitleHtml ? rawTitleHtml.split('<span')[0].trim().replace(/ - Episode$/i, '').replace(/-$/, '').trim() : $('h1.video-title').text().trim();
-        
-        const description = $('.video-description').text().trim();
-        const cover = $('meta[itemprop="thumbnailUrl"]').attr('content');
-        const totalEpisodeText = $('.video-meta span[itemprop="numberOfEpisodes"]').text().trim();
-        const likesText = $('.video-meta span').first().text().trim();
+
+        const title = $('h1').first().text().trim();
+        const description = $('p.line-clamp-3').text().trim() || $('div.text-sm').first().text().trim();
+        const cover = $('img.w-full').first().attr('src') || $('img').first().attr('src');
+        const totalEpisodeText = $('span').filter((i, el) => $(el).text().includes('Episode')).first().text().trim();
 
         const episodes = [];
-        $('#episodesList .episode-btn').each((index, element) => {
-            const epNum = $(element).attr('data-episode'); 
-            const label = $(element).text().trim(); 
+        $('button[data-episode], a[href*="episode"]').each((index, element) => {
+            const epNum = $(element).attr('data-episode') || (index + 1);
+            const label = $(element).text().trim() || `Episode ${epNum}`;
             episodes.push({
                 episode_index: parseInt(epNum),
                 episode_label: label,
@@ -186,11 +195,10 @@ app.get('/api/detail', async (req, res) => {
         res.json({
             status: 'success',
             bookId: bookId,
-            judul: cleanTitle,
+            judul: title,
             deskripsi: description,
             cover: cover,
-            total_episode: totalEpisodeText.replace('📺', '').trim(),
-            likes: likesText.replace('❤️', '').trim(),
+            total_episode: totalEpisodeText,
             jumlah_episode_tersedia: episodes.length,
             episodes: episodes
         });
@@ -202,12 +210,11 @@ app.get('/api/detail', async (req, res) => {
 
 app.get('/api/stream', async (req, res) => {
     const { bookId, episode } = req.query;
-    const lang = req.query.lang || 'in';
 
     if (!bookId || !episode) {
-        return res.status(400).json({ 
-            status: 'error', 
-            message: 'Parameter bookId dan episode wajib diisi.' 
+        return res.status(400).json({
+            status: 'error',
+            message: 'Parameter bookId dan episode wajib diisi.'
         });
     }
 
@@ -218,19 +225,17 @@ app.get('/api/stream', async (req, res) => {
             'Referer': `${DETAIL_URL}?bookId=${bookId}`
         };
 
-        const response = await axios.get(DETAIL_URL, {
-            params: { 
-                ajax: 1,
-                bookId: bookId, 
-                lang: lang, 
-                episode: episode 
+        const response = await axios.get(`${BASE_URL}/api/video`, {
+            params: {
+                bookId: bookId,
+                episode: episode
             },
             headers: headers
         });
 
         const rawData = response.data;
 
-        if (!rawData || !rawData.chapter) {
+        if (!rawData || (!rawData.video && !rawData.url)) {
             return res.status(404).json({
                 status: 'error',
                 message: 'Episode tidak ditemukan atau terkunci.'
@@ -239,21 +244,10 @@ app.get('/api/stream', async (req, res) => {
 
         const formattedResult = {
             status: "success",
-            apiBy: "regexd.com",
             data: {
                 bookId: bookId.toString(),
-                allEps: rawData.totalEpisodes,
-                chapter: {
-                    id: rawData.chapter.id,
-                    index: rawData.chapter.index,
-                    indexCode: rawData.chapter.indexStr,
-                    duration: rawData.chapter.duration,
-                    cover: rawData.chapter.cover,
-                    video: {
-                        mp4: rawData.chapter.mp4,
-                        m3u8: rawData.chapter.m3u8Url
-                    }
-                }
+                episode: parseInt(episode),
+                video: rawData.video || rawData.url || rawData
             }
         };
 
@@ -261,10 +255,10 @@ app.get('/api/stream', async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ 
-            status: 'error', 
-            message: 'Gagal mengambil stream', 
-            error: error.message 
+        res.status(500).json({
+            status: 'error',
+            message: 'Gagal mengambil stream',
+            error: error.message
         });
     }
 });
